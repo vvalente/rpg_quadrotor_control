@@ -19,6 +19,8 @@
 #include <quadrotor_msgs/Trajectory.h>
 #include <quadrotor_msgs/TrajectoryPoint.h>
 #include <ros/ros.h>
+#include <simple_controller/simple_controller.h>
+#include <simple_controller/simple_controller_params.h>
 #include <state_predictor/state_predictor.h>
 #include <std_msgs/Empty.h>
 
@@ -217,6 +219,8 @@ private:
   double control_command_input_timeout_;
   bool enable_command_feedthrough_;
   double predictive_control_lookahead_;
+  int odometry_throttle_;
+  int callback_counter_ = 0;
 
   // Constants
   static constexpr double kVelocityCommandZeroThreshold_ = 0.03;

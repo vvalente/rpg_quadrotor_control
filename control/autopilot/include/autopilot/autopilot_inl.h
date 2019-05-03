@@ -50,7 +50,7 @@ AutoPilot<Tcontroller, Tparams>::AutoPilot(const ros::NodeHandle& nh, const ros:
 
   // Subscribers
   state_estimate_sub_ = nh_.subscribe("autopilot/state_estimate", 1,
-    &AutoPilot<Tcontroller, Tparams>::stateEstimateCallback, this);
+    &AutoPilot<Tcontroller, Tparams>::stateEstimateCallback, this, ros::TransportHints().tcpNoDelay());
   low_level_feedback_sub_ = nh_.subscribe("low_level_feedback", 1,
     &AutoPilot<Tcontroller, Tparams>::lowLevelFeedbackCallback, this);
 
@@ -319,6 +319,14 @@ template <typename Tcontroller, typename Tparams>
 void AutoPilot<Tcontroller, Tparams>::stateEstimateCallback(
   const nav_msgs::Odometry::ConstPtr& msg)
 {
+  callback_counter_++;
+  if(callback_counter_ % odometry_throttle_ == 0)
+  {
+    callback_counter_ = 0;
+  } else {
+    return;
+  }
+
   if (destructor_invoked_)
   {
     return;
@@ -347,7 +355,6 @@ void AutoPilot<Tcontroller, Tparams>::stateEstimateCallback(
   {
     received_state_est_.transformVelocityToWorldFrame();
   }
-
   // Push received state estimate into predictor
   state_predictor_.updateWithStateEstimate(received_state_est_);
 
@@ -455,7 +462,6 @@ void AutoPilot<Tcontroller, Tparams>::stateEstimateCallback(
                              received_low_level_feedback_, reference_state_,
                              predicted_state);
   }
-
   // Mutex is unlocked because it goes out of scope here
 }
 
@@ -903,7 +909,7 @@ quadrotor_common::ControlCommand AutoPilot<Tcontroller, Tparams>::start(
          start_land_velocity_ / start_land_acceleration_)
       {
         reference_state_.acceleration.z() = start_land_acceleration_;
-        reference_state_.velocity.z() = start_land_acceleration_ * 
+        reference_state_.velocity.z() = start_land_acceleration_ *
           (timeInCurrentState() - start_idle_duration_);
       }
       else
@@ -1227,7 +1233,7 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
 
   // New trajectory where we fill in our lookahead horizon.
   reference_trajectory_ = quadrotor_common::Trajectory();
-  reference_trajectory_.trajectory_type = 
+  reference_trajectory_.trajectory_type =
     quadrotor_common::Trajectory::TrajectoryType::GENERAL;
 
   bool lookahead_reached(false);    // Boolean break flag
@@ -1235,16 +1241,14 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
   double time_wrapover(0.0);
 
   // Loop over possible trajectories.
-  for(std::list<quadrotor_common::Trajectory>::const_iterator
-      it_trajectories = trajectory_queue_.begin();
-      it_trajectories != trajectory_queue_.end();
-      it_trajectories++)
+  for (auto it_trajectories = trajectory_queue_.begin();
+       it_trajectories != trajectory_queue_.end();
+       it_trajectories++)
   {
     // Loop over points on the trajectory
-    for(std::list<quadrotor_common::TrajectoryPoint>::const_iterator
-        it_points = it_trajectories->points.begin();
-        it_points != it_trajectories->points.end();
-        it_points++)
+    for (auto it_points = it_trajectories->points.begin();
+         it_points != it_trajectories->points.end();
+         it_points++)
     {
       // Check wether we reached our lookahead.
       // Use boolen flag to also break the outer loop.
@@ -1258,11 +1262,10 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
       if(it_points->time_from_start.toSec()>(dt.toSec()-time_wrapover))
       {
         reference_trajectory_.points.push_back(*it_points);
-        break;
       }
     }
     if(lookahead_reached) break;  // Break on boolean flag.
-    // Sum up the wrap-ovvr time if lookahead spans multiple trajectories.
+    // Sum up the wrap-over time if lookahead spans multiple trajectories.
     time_wrapover += it_trajectories->points.back().time_from_start.toSec();
   }
 
@@ -1279,6 +1282,8 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
     }
   }
   *trajectories_left_in_queue = trajectory_queue_.size();
+
+//  printf("Size of reference trajectory: %d \n", static_cast<int>(reference_trajectory_.points.size()));
 
   const quadrotor_common::ControlCommand command = base_controller_.run(
       state_estimate, reference_trajectory_, base_controller_params_);
@@ -1504,6 +1509,7 @@ if (!quadrotor_common::getParam(#name, name ## _, pnh_)) \
   GET_PARAM(state_estimate_timeout);
   GET_PARAM(velocity_estimate_in_world_frame);
   GET_PARAM(control_command_delay);
+  GET_PARAM(odometry_throttle);
   GET_PARAM(start_land_velocity);
   GET_PARAM(start_land_acceleration);
   GET_PARAM(start_idle_duration);
@@ -1535,8 +1541,5 @@ if (!quadrotor_common::getParam(#name, name ## _, pnh_)) \
 
 #undef GET_PARAM
 }
-
-template class AutoPilot<position_controller::PositionController,
-                         position_controller::PositionControllerParams>;
 
 } // namespace autopilot

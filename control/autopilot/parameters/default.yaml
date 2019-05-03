@@ -1,6 +1,7 @@
 state_estimate_timeout: 0.2 # [s]
 velocity_estimate_in_world_frame: true
 control_command_delay: 0.0 # [s]
+odometry_throttle: 2 # publish control commands every n-th state estimate
 
 start_land_velocity: 0.5 # [m/s]
 start_land_acceleration: 1 # [m/s^2]

@@ -19,6 +19,7 @@
   <depend>quadrotor_common</depend>
   <depend>quadrotor_msgs</depend>
   <depend>roscpp</depend>
+  <depend>simple_controller</depend>
   <depend>state_predictor</depend>
   <depend>std_msgs</depend>
   <depend>trajectory_generation_helper</depend>
