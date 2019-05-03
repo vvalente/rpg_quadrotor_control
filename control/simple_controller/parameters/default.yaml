@@ -1,0 +1,16 @@
+simple_controller:
+  # position controller
+  tauPosXY: 0.3
+  zetaPosXY: 0.95
+  tauPosZ: 0.2
+  zetaPosZ: 0.9
+
+  # attitude controller
+  tauAttXY: 0.15
+  tauAttZ: 0.5
+
+  # constraints
+  minThrust: 0.25
+  maxThrust: 30.0
+  maxOmegaXY: 30.0
+  maxOmegaZ: 20.0
