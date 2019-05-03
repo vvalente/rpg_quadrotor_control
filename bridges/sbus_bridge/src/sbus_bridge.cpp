@@ -47,7 +47,7 @@ SBusBridge::SBusBridge(const ros::NodeHandle& nh, const ros::NodeHandle& pnh) :
                                   &SBusBridge::armBridgeCallback, this);
   control_command_sub_ = nh_.subscribe("control_command", 1,
                                        &SBusBridge::controlCommandCallback,
-                                       this);
+                                       this, ros::TransportHints().tcpNoDelay());
   battery_voltage_sub_ = nh_.subscribe("battery_voltage", 1,
                                        &SBusBridge::batteryVoltageCallback,
                                        this);
