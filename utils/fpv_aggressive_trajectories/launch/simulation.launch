@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="quad_name" default="hummingbird"/>
+
+  <include file="$(find rpg_rotors_interface)/launch/quadrotor_empty_world.launch">
+    <arg name="quad_name" value="$(arg quad_name)"/>
+    <arg name="use_mpc" value="false"/>
+    <arg name="standard_controller" value="position_controller"/>
+  </include>
+
+  <group ns="$(arg quad_name)" >
+
+    <!-- Actual Demo files -->
+    <node pkg="fpv_aggressive_trajectories" name="fpv_aggressive_trajectories"
+        type="fpv_aggressive_trajectories" output="screen">
+      <param name="loop_rate" value="55.0" />
+      <param name="desired_yaw_P" value="0.0" />
+      <param name="circle_velocity" value="3.5" /> <!-- 3.5 for nice looping; 1.0-2.0 for testing -->
+      <param name="n_loops" value="1" />
+    </node>
+
+    <!-- Visualization -->
+    <node pkg="trajectory_visualizer" name="trajectory_visualizer" 
+        type="trajectory_visualizer" output="screen">
+      <param name="n_points_to_visualize" value="300" />
+    </node>
+
+    <node pkg="rviz" type="rviz" name="viz_face" 
+        args="-d $(find fpv_aggressive_trajectories)/rviz/trajectory_comparison_looping_sim.rviz"/>
+
+    <node pkg="rqt_gui" name="rqt_gui" type="rqt_gui" 
+        args="--clear-config --perspective-file $(find fpv_aggressive_trajectories)/rviz/simulation_looping.perspective"/>
+
+  </group>
+
+</launch>

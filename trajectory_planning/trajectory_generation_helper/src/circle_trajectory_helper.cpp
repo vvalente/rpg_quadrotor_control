@@ -116,6 +116,13 @@ quadrotor_common::Trajectory computeVerticalCircleTrajectory(
         * (radius * pow(omega, 3.0) * Eigen::Vector3d(sin_phi, 0.0, cos_phi));
     point.snap = q_ori
         * (radius * pow(omega, 4.0) * Eigen::Vector3d(cos_phi, 0.0, -sin_phi));
+    Eigen::Vector3d I_eZ_I(0.0, 0.0, 1.0);
+    Eigen::Quaterniond quatDes = Eigen::Quaterniond::FromTwoVectors(I_eZ_I, point.acceleration + Eigen::Vector3d(0.0, 0.0, 9.81))
+        * Eigen::Quaterniond(std::cos(0.5 * orientation),
+                             0.0,
+                             0.0,
+                             std::sin(0.5 * orientation));
+    point.orientation = quatDes;
 
     trajectory.points.push_back(point);
   }
@@ -136,6 +143,13 @@ quadrotor_common::Trajectory computeVerticalCircleTrajectory(
       * (radius * pow(omega, 3.0) * Eigen::Vector3d(sin_phi, 0.0, cos_phi));
   point.snap = q_ori
       * (radius * pow(omega, 4.0) * Eigen::Vector3d(cos_phi, 0.0, -sin_phi));
+  Eigen::Vector3d I_eZ_I(0.0, 0.0, 1.0);
+  Eigen::Quaterniond quatDes = Eigen::Quaterniond::FromTwoVectors(I_eZ_I, point.acceleration + Eigen::Vector3d(0.0, 0.0, 9.81))
+      * Eigen::Quaterniond(std::cos(0.5 * orientation),
+                           0.0,
+                           0.0,
+                           std::sin(0.5 * orientation));
+  point.orientation = quatDes;
 
   trajectory.points.push_back(point);
 

@@ -17,6 +17,15 @@ void addConstantHeading(const double heading,
     it->heading = heading;
     it->heading_rate = 0.0;
     it->heading_acceleration = 0.0;
+
+    // add orientation to reference
+    Eigen::Vector3d I_eZ_I(0.0, 0.0, 1.0);
+    Eigen::Quaterniond quatDes = Eigen::Quaterniond::FromTwoVectors(I_eZ_I, it->acceleration + Eigen::Vector3d(0.0, 0.0, 9.81))
+        * Eigen::Quaterniond(std::cos(0.5 * heading),
+                             0.0,
+                             0.0,
+                             std::sin(0.5 * heading));
+    it->orientation = quatDes;
   }
 }
 
