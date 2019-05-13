@@ -1,7 +1,7 @@
 state_estimate_timeout: 0.1 # [s]
 velocity_estimate_in_world_frame: false
-control_command_delay: 0.05 # [s]
-odometry_throttle: 2 # publish control commands every n-th state estimate
+control_command_delay: 0.001 # [s]
+odometry_throttle: 1 # publish control commands every n-th state estimate
 
 start_land_velocity: 0.5 # [m/s]
 start_land_acceleration: 1 # [m/s^2]
@@ -29,4 +29,4 @@ emergency_land_thrust: 9.0 # [m/s^2]
 
 control_command_input_timeout: 0.1 # [s]
 enable_command_feedthrough: true
-predictive_control_lookahead: 2.0 # [s]
+predictive_control_lookahead: 0.5 # [s]

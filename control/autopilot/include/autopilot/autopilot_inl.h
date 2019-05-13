@@ -1253,7 +1253,7 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
       // Check wether we reached our lookahead.
       // Use boolen flag to also break the outer loop.
       if(it_points->time_from_start.toSec() >
-          (dt.toSec()+predictive_control_lookahead_))
+          (dt.toSec()-time_wrapover+predictive_control_lookahead_))
       {
         lookahead_reached = true;
         break;

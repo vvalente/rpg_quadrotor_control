@@ -22,8 +22,8 @@ FPVAggressiveTrajectories::FPVAggressiveTrajectories() {
       "fpv_quad_looping/execute_trajectory", 1,
       &FPVAggressiveTrajectories::startExecutionCallback, this);
 
-//  if (!computeSplitS()) {
-  if (!computeLoop()) {
+ if (!computeSplitS()) {
+// if (!computeLoop()) {
 //  if (!computeSpin()) {
     ROS_ERROR("[%s] Failed to compute feasible trajectories",
               ros::this_node::getName().c_str());
@@ -150,7 +150,7 @@ bool FPVAggressiveTrajectories::computeSplitS() {
   quadrotor_common::Trajectory enter_trajectory =
       trajectory_generation_helper::polynomials::computeTimeOptimalTrajectory(
           start_state, circle_enter_state, 4, 1.1 * circle_velocity_,
-          max_thrust, max_roll_pitch_rate, exec_loop_rate_);
+          0.5*max_thrust, 0.5*max_roll_pitch_rate, exec_loop_rate_);
   trajectory_generation_helper::heading::addConstantHeading(desired_heading_,
                                                             &enter_trajectory);
 

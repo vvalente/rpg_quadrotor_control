@@ -5,7 +5,7 @@
 
   <include file="$(find rpg_rotors_interface)/launch/quadrotor_empty_world.launch">
     <arg name="quad_name" value="$(arg quad_name)"/>
-    <arg name="use_mpc" value="false"/>
+    <arg name="use_mpc" value="true"/>
     <arg name="standard_controller" value="position_controller"/>
   </include>
 
