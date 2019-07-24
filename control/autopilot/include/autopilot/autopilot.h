@@ -63,6 +63,7 @@ private:
   void forceHoverCallback(const std_msgs::Empty::ConstPtr& msg);
   void landCallback(const std_msgs::Empty::ConstPtr& msg);
   void offCallback(const std_msgs::Empty::ConstPtr& msg);
+  void reloadParamsCallback(const std_msgs::Empty::ConstPtr& msg);
 
   quadrotor_common::ControlCommand start(
       const quadrotor_common::QuadStateEstimate& state_estimate);
@@ -123,6 +124,7 @@ private:
 
   ros::Publisher control_command_pub_;
   ros::Publisher autopilot_feedback_pub_;
+  ros::Publisher marker_pub_ref_;
 
   ros::Subscriber state_estimate_sub_;
   ros::Subscriber low_level_feedback_sub_;
@@ -135,6 +137,7 @@ private:
   ros::Subscriber force_hover_sub_;
   ros::Subscriber land_sub_;
   ros::Subscriber off_sub_;
+  ros::Subscriber reload_param_sub_;
 
   state_predictor::StatePredictor state_predictor_;
 
