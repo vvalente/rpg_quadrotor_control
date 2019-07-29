@@ -49,7 +49,8 @@ AutoPilot<Tcontroller, Tparams>::AutoPilot(const ros::NodeHandle& nh, const ros:
 
   // Subscribers
   state_estimate_sub_ = nh_.subscribe("autopilot/state_estimate", 1,
-                                      &AutoPilot<Tcontroller, Tparams>::stateEstimateCallback, this, ros::TransportHints().tcpNoDelay());
+                                      &AutoPilot<Tcontroller, Tparams>::stateEstimateCallback, this,
+                                      ros::TransportHints().tcpNoDelay());
   low_level_feedback_sub_ = nh_.subscribe("low_level_feedback", 1,
                                           &AutoPilot<Tcontroller, Tparams>::lowLevelFeedbackCallback, this);
 
@@ -780,7 +781,6 @@ template<typename Tcontroller, typename Tparams>
 quadrotor_common::ControlCommand AutoPilot<Tcontroller, Tparams>::start(
     const quadrotor_common::QuadStateEstimate& state_estimate) {
   quadrotor_common::ControlCommand command;
-
   if (first_time_in_new_state_) {
     first_time_in_new_state_ = false;
     initial_start_position_ = state_estimate.position;
@@ -819,9 +819,46 @@ quadrotor_common::ControlCommand AutoPilot<Tcontroller, Tparams>::start(
     }
   }
 
+  printf(
+      "[AUTOPILOT] reference_state: [%.2f, %.2f, %.2f | %.2f, %.2f, %.2f, %.2f | %.2f, %.2f, %.2f | %.2f, %.2f, %.2f]\n",
+      reference_state_.position.x(),
+      reference_state_.position.y(),
+      reference_state_.position.z(),
+      reference_state_.orientation.w(),
+      reference_state_.orientation.x(),
+      reference_state_.orientation.y(),
+      reference_state_.orientation.z(),
+      reference_state_.velocity.x(),
+      reference_state_.velocity.y(),
+      reference_state_.velocity.z(),
+      reference_state_.bodyrates.x(),
+      reference_state_.bodyrates.y(),
+      reference_state_.bodyrates.z());
+  printf(
+      "[AUTOPILOT] state_estimate: [%.2f, %.2f, %.2f | %.2f, %.2f, %.2f, %.2f | %.2f, %.2f, %.2f | %.2f, %.2f, %.2f]\n",
+      state_estimate.position.x(),
+      state_estimate.position.y(),
+      state_estimate.position.z(),
+      state_estimate.orientation.w(),
+      state_estimate.orientation.x(),
+      state_estimate.orientation.y(),
+      state_estimate.orientation.z(),
+      state_estimate.velocity.x(),
+      state_estimate.velocity.y(),
+      state_estimate.velocity.z(),
+      state_estimate.bodyrates.x(),
+      state_estimate.bodyrates.y(),
+      state_estimate.bodyrates.z());
+
   reference_trajectory_ = quadrotor_common::Trajectory(reference_state_);
   command = base_controller_.run(state_estimate, reference_trajectory_,
                                  base_controller_params_);
+
+  printf("[AUTOPILOT] command: [%.2f, %.2f, %.2f, %.2f]\n",
+         command.collective_thrust,
+         command.bodyrates.x(),
+         command.bodyrates.y(),
+         command.bodyrates.z());
 
   return command;
 }
@@ -1051,23 +1088,20 @@ AutoPilot<Tcontroller, Tparams>::followReference(
   return command;
 }
 
-template <typename Tcontroller, typename Tparams>
+template<typename Tcontroller, typename Tparams>
 quadrotor_common::ControlCommand
 AutoPilot<Tcontroller, Tparams>::executeTrajectory(
     const quadrotor_common::QuadStateEstimate& state_estimate,
     ros::Duration* trajectory_execution_left_duration,
-    int* trajectories_left_in_queue)
-{
+    int* trajectories_left_in_queue) {
 //  printf("Execute Trajectory\n");
   const ros::Time time_now = ros::Time::now();
-  if (first_time_in_new_state_)
-  {
+  if (first_time_in_new_state_) {
     first_time_in_new_state_ = false;
     time_start_trajectory_execution_ = time_now;
   }
 
-  if (trajectory_queue_.empty())
-  {
+  if (trajectory_queue_.empty()) {
     ROS_ERROR(
         "[%s] Trajectory queue was unexpectedly emptied, going back to HOVER",
         pnh_.getNamespace().c_str());
@@ -1081,10 +1115,8 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
   }
 
   if ((time_now - time_start_trajectory_execution_)
-      > trajectory_queue_.front().points.back().time_from_start)
-  {
-    if (trajectory_queue_.size() == 1)
-    {
+      > trajectory_queue_.front().points.back().time_from_start) {
+    if (trajectory_queue_.size() == 1) {
       // This was the last trajectory in the queue -> go back to hover
       reference_state_ = trajectory_queue_.back().points.back();
       *trajectory_execution_left_duration = ros::Duration(0.0);
@@ -1095,9 +1127,7 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
       reference_trajectory_ = quadrotor_common::Trajectory(reference_state_);
       return base_controller_.run(state_estimate, reference_trajectory_,
                                   base_controller_params_);
-    }
-    else
-    {
+    } else {
       time_start_trajectory_execution_ +=
           trajectory_queue_.front().points.back().time_from_start;
       trajectory_queue_.pop_front();
@@ -1117,68 +1147,61 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
   // Time wrap if lookahead spans multiple trajectories:
   double time_wrapover(0.0);
 
-  // Loop over possible trajectories.
-  for (auto it_trajectories = trajectory_queue_.begin();
-       it_trajectories != trajectory_queue_.end();
-       it_trajectories++)
-  {
-    // Loop over points on the trajectory
-    for (auto it_points = it_trajectories->points.begin();
-         it_points != it_trajectories->points.end();
-         it_points++)
-    {
+  for (auto trajectory : trajectory_queue_) {
+    for (auto point : trajectory.points) {
       // Check wether we reached our lookahead.
-      // Use boolen flag to also break the outer loop.
-      if(it_points->time_from_start.toSec() >
-         (dt.toSec()-time_wrapover+predictive_control_lookahead_))
-      {
+      // Use boolean flag to also break the outer loop.
+      if (point.time_from_start.toSec() >
+          (dt.toSec() - time_wrapover + predictive_control_lookahead_)) {
         lookahead_reached = true;
         break;
       }
       // Add a point if the time corresponds to a sample on the lookahead.
-      if(it_points->time_from_start.toSec()>(dt.toSec()-time_wrapover))
-      {
+      if (point.time_from_start.toSec() > (dt.toSec() - time_wrapover)) {
         // check if two trajectory points are the same...
-        if(reference_trajectory_.points.size() > 1)
-        {
+        if (reference_trajectory_.points.size() > 1) {
           Eigen::Vector3d last_pos = reference_trajectory_.points.back().position;
-          double pos_incr = (it_points->position - last_pos).norm();
-          if(pos_incr > 0.001) {
-            reference_trajectory_.points.push_back(*it_points);
+          double pos_incr = (point.position - last_pos).norm();
+          if (pos_incr > 0.001) {
+            point.time_from_start += ros::Duration(time_wrapover);
+            reference_trajectory_.points.push_back(point);
           }
-//          else {
-//            printf("Discarded trajectory point!\n");
-//          }
+        } else {
+          // this is the first point of the reference trajectory
+          reference_trajectory_.points.push_back(point);
         }
-        else {
-          reference_trajectory_.points.push_back(*it_points);
-        }
-//        printf("Position: %.2f, %.2f, %.2f \n", it_points->position.x(), it_points->position.y(), it_points->position.z());
-//        printf("Bodyrates: %.2f, %.2f, %.2f \n", it_points->bodyrates.x(), it_points->bodyrates.y(), it_points->bodyrates.z());
-//        printf("Acceleration: %.2f, %.2f, %.2f \n", it_points->acceleration.x(), it_points->acceleration.y(), it_points->acceleration.z());
       }
     }
-    if(lookahead_reached) break;  // Break on boolean flag.
+    if (lookahead_reached) break;  // Break on boolean flag.
     // Sum up the wrap-over time if lookahead spans multiple trajectories.
-    time_wrapover += it_trajectories->points.back().time_from_start.toSec();
+    time_wrapover += trajectory.points.back().time_from_start.toSec();
   }
 
   *trajectory_execution_left_duration =
       trajectory_queue_.front().points.back().time_from_start
       - reference_state_.time_from_start;
-  if (trajectory_queue_.size() > 1)
-  {
+  if (trajectory_queue_.size() > 1) {
     std::list<quadrotor_common::Trajectory>::const_iterator it;
     for (it = std::next(trajectory_queue_.begin(), 1);
-         it != trajectory_queue_.end(); it++)
-    {
+         it != trajectory_queue_.end(); it++) {
       *trajectory_execution_left_duration += it->points.back().time_from_start;
     }
   }
   *trajectories_left_in_queue = trajectory_queue_.size();
 
 //  printf("Size of reference trajectory: %d \n", static_cast<int>(reference_trajectory_.points.size()));
+//  printf("Duration reference : %.2f", (reference_trajectory_.points.back().time_from_start - reference_trajectory_.points.front().time_from_start).toSec());
 
+  // handle case of empty reference_trajectory
+  if (reference_trajectory_.points.empty()) {
+    *trajectory_execution_left_duration = ros::Duration(0.0);
+    *trajectories_left_in_queue = 0;
+    setAutoPilotState(States::HOVER);
+
+    reference_trajectory_ = quadrotor_common::Trajectory(reference_state_);
+    return base_controller_.run(state_estimate, reference_trajectory_,
+                                base_controller_params_);
+  }
   // visualize reference trajectory
   // Reference trajectory
   visualization_msgs::MarkerArray marker_msg_ref;
@@ -1208,8 +1231,7 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
 //  reference_trajectory_.points.clear();
 //  reference_trajectory_.points.push_back(temp_pt);
 
-  for (auto it = reference_trajectory_.points.begin(); it != reference_trajectory_.points.end(); it++)
-  {
+  for (auto it = reference_trajectory_.points.begin(); it != reference_trajectory_.points.end(); it++) {
     geometry_msgs::Point point;
     point.x = it->position.x();
     point.y = it->position.y();
@@ -1220,6 +1242,26 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
 
   marker_msg_ref.markers.push_back(marker);
   marker_pub_ref_.publish(marker_msg_ref);
+
+//  printf(
+//      "[AUTOPILOT] reference_state: [%.2f, %.2f, %.2f | %.2f, %.2f, %.2f, %.2f | %.2f, %.2f, %.2f | %.2f, %.2f, %.2f | %.2f, %.2f, %.2f]\n",
+//      reference_trajectory_.points.begin()->position.x(),
+//      reference_trajectory_.points.begin()->position.y(),
+//      reference_trajectory_.points.begin()->position.z(),
+//      reference_trajectory_.points.begin()->orientation.w(),
+//      reference_trajectory_.points.begin()->orientation.x(),
+//      reference_trajectory_.points.begin()->orientation.y(),
+//      reference_trajectory_.points.begin()->orientation.z(),
+//      reference_trajectory_.points.begin()->velocity.x(),
+//      reference_trajectory_.points.begin()->velocity.y(),
+//      reference_trajectory_.points.begin()->velocity.z(),
+//      reference_trajectory_.points.begin()->bodyrates.x(),
+//      reference_trajectory_.points.begin()->bodyrates.y(),
+//      reference_trajectory_.points.begin()->bodyrates.z(),
+//      reference_trajectory_.points.begin()->jerk.x(),
+//      reference_trajectory_.points.begin()->jerk.y(),
+//      reference_trajectory_.points.begin()->jerk.z());
+
 
   const quadrotor_common::ControlCommand command = base_controller_.run(
       state_estimate, reference_trajectory_, base_controller_params_);
