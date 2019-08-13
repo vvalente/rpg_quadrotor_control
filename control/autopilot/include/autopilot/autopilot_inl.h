@@ -819,46 +819,9 @@ quadrotor_common::ControlCommand AutoPilot<Tcontroller, Tparams>::start(
     }
   }
 
-  printf(
-      "[AUTOPILOT] reference_state: [%.2f, %.2f, %.2f | %.2f, %.2f, %.2f, %.2f | %.2f, %.2f, %.2f | %.2f, %.2f, %.2f]\n",
-      reference_state_.position.x(),
-      reference_state_.position.y(),
-      reference_state_.position.z(),
-      reference_state_.orientation.w(),
-      reference_state_.orientation.x(),
-      reference_state_.orientation.y(),
-      reference_state_.orientation.z(),
-      reference_state_.velocity.x(),
-      reference_state_.velocity.y(),
-      reference_state_.velocity.z(),
-      reference_state_.bodyrates.x(),
-      reference_state_.bodyrates.y(),
-      reference_state_.bodyrates.z());
-  printf(
-      "[AUTOPILOT] state_estimate: [%.2f, %.2f, %.2f | %.2f, %.2f, %.2f, %.2f | %.2f, %.2f, %.2f | %.2f, %.2f, %.2f]\n",
-      state_estimate.position.x(),
-      state_estimate.position.y(),
-      state_estimate.position.z(),
-      state_estimate.orientation.w(),
-      state_estimate.orientation.x(),
-      state_estimate.orientation.y(),
-      state_estimate.orientation.z(),
-      state_estimate.velocity.x(),
-      state_estimate.velocity.y(),
-      state_estimate.velocity.z(),
-      state_estimate.bodyrates.x(),
-      state_estimate.bodyrates.y(),
-      state_estimate.bodyrates.z());
-
   reference_trajectory_ = quadrotor_common::Trajectory(reference_state_);
   command = base_controller_.run(state_estimate, reference_trajectory_,
                                  base_controller_params_);
-
-  printf("[AUTOPILOT] command: [%.2f, %.2f, %.2f, %.2f]\n",
-         command.collective_thrust,
-         command.bodyrates.x(),
-         command.bodyrates.y(),
-         command.bodyrates.z());
 
   return command;
 }
@@ -1094,7 +1057,6 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
     const quadrotor_common::QuadStateEstimate& state_estimate,
     ros::Duration* trajectory_execution_left_duration,
     int* trajectories_left_in_queue) {
-//  printf("Execute Trajectory\n");
   const ros::Time time_now = ros::Time::now();
   if (first_time_in_new_state_) {
     first_time_in_new_state_ = false;
@@ -1189,9 +1151,6 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
   }
   *trajectories_left_in_queue = trajectory_queue_.size();
 
-//  printf("Size of reference trajectory: %d \n", static_cast<int>(reference_trajectory_.points.size()));
-//  printf("Duration reference : %.2f", (reference_trajectory_.points.back().time_from_start - reference_trajectory_.points.front().time_from_start).toSec());
-
   // handle case of empty reference_trajectory
   if (reference_trajectory_.points.empty()) {
     *trajectory_execution_left_duration = ros::Duration(0.0);
@@ -1242,26 +1201,6 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
 
   marker_msg_ref.markers.push_back(marker);
   marker_pub_ref_.publish(marker_msg_ref);
-
-//  printf(
-//      "[AUTOPILOT] reference_state: [%.2f, %.2f, %.2f | %.2f, %.2f, %.2f, %.2f | %.2f, %.2f, %.2f | %.2f, %.2f, %.2f | %.2f, %.2f, %.2f]\n",
-//      reference_trajectory_.points.begin()->position.x(),
-//      reference_trajectory_.points.begin()->position.y(),
-//      reference_trajectory_.points.begin()->position.z(),
-//      reference_trajectory_.points.begin()->orientation.w(),
-//      reference_trajectory_.points.begin()->orientation.x(),
-//      reference_trajectory_.points.begin()->orientation.y(),
-//      reference_trajectory_.points.begin()->orientation.z(),
-//      reference_trajectory_.points.begin()->velocity.x(),
-//      reference_trajectory_.points.begin()->velocity.y(),
-//      reference_trajectory_.points.begin()->velocity.z(),
-//      reference_trajectory_.points.begin()->bodyrates.x(),
-//      reference_trajectory_.points.begin()->bodyrates.y(),
-//      reference_trajectory_.points.begin()->bodyrates.z(),
-//      reference_trajectory_.points.begin()->jerk.x(),
-//      reference_trajectory_.points.begin()->jerk.y(),
-//      reference_trajectory_.points.begin()->jerk.z());
-
 
   const quadrotor_common::ControlCommand command = base_controller_.run(
       state_estimate, reference_trajectory_, base_controller_params_);
