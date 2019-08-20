@@ -21,7 +21,6 @@ void addConstantHeading(const double heading,
     acc2.normalize();
 
     Eigen::Vector3d crossProd = acc1.cross(acc2); //direction of omega, in inertial axes
-
     Eigen::Vector3d bodyrates_wf = Eigen::Vector3d(0, 0, 0);
     if (crossProd.norm()) {
       bodyrates_wf = acos(acc1.dot(acc2)) / time_step) * crossProd.normalize();

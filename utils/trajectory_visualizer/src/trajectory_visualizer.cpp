@@ -48,10 +48,26 @@ void TrajectoryVisualizer::autopilotFeedbackCallback(
   }
 
   // visualize full pose of reference...
+  // combine orientation with heading to single quaternion
+  Eigen::Quaterniond orientation = Eigen::Quaterniond(msg->reference_state.pose.orientation.w,
+                                                      msg->reference_state.pose.orientation.x,
+                                                      msg->reference_state.pose.orientation.y,
+                                                      msg->reference_state.pose.orientation.z);
+
+
   nav_msgs::Odometry reference_odometry;
   reference_odometry.header.stamp = msg->header.stamp;
   reference_odometry.header.frame_id = "world";
-  reference_odometry.pose.pose.orientation = msg->reference_state.pose.orientation;
+  Eigen::Quaternion<double> q_orientation;
+  Eigen::Quaternion<double> q_heading = Eigen::Quaternion<double>(Eigen::AngleAxis<double>(
+      msg->reference_state.heading, Eigen::Matrix<double, 3, 1>::UnitZ()));
+  q_orientation = q_heading * orientation;
+  reference_odometry.pose.pose.orientation.w = q_orientation.w();
+  reference_odometry.pose.pose.orientation.x = q_orientation.x();
+  reference_odometry.pose.pose.orientation.y = q_orientation.y();
+  reference_odometry.pose.pose.orientation.z = q_orientation.z();
+
+//  reference_odometry.pose.pose.orientation = msg->reference_state.pose.orientation;
   reference_odometry.pose.pose.position = msg->reference_state.pose.position;
 
   odometry_ref_pub_.publish(reference_odometry);

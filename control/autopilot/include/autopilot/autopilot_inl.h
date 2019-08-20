@@ -552,6 +552,7 @@ void AutoPilot<Tcontroller, Tparams>::trajectoryCallback(
 
   std::lock_guard<std::mutex> main_lock(main_mutex_);
 
+
   // Idea: trajectories are being pushed into a queue and consecutively
   // executed if there are no jumps in the beginning and between them
 
@@ -1085,7 +1086,6 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
       *trajectories_left_in_queue = 0;
       trajectory_queue_.pop_front();
       setAutoPilotStateForced(States::HOVER);
-
       reference_trajectory_ = quadrotor_common::Trajectory(reference_state_);
       return base_controller_.run(state_estimate, reference_trajectory_,
                                   base_controller_params_);
@@ -1161,6 +1161,7 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
     return base_controller_.run(state_estimate, reference_trajectory_,
                                 base_controller_params_);
   }
+
   // visualize reference trajectory
   // Reference trajectory
   visualization_msgs::MarkerArray marker_msg_ref;
@@ -1184,11 +1185,6 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
   marker.color.g = 0.0;
   marker.color.b = 1.0;
   marker.color.a = 1.0;
-
-  // try to pass only the first element of the reference trajectory to the controller
-//  quadrotor_common::TrajectoryPoint temp_pt = reference_trajectory_.points.front();
-//  reference_trajectory_.points.clear();
-//  reference_trajectory_.points.push_back(temp_pt);
 
   for (auto it = reference_trajectory_.points.begin(); it != reference_trajectory_.points.end(); it++) {
     geometry_msgs::Point point;
