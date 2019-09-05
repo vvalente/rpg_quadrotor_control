@@ -20,6 +20,7 @@ private:
   ros::Publisher marker_pub_ref_;
   ros::Publisher marker_pub_se_;
   ros::Publisher odometry_ref_pub_;
+  ros::Publisher bodyrates_pub_;
   ros::Subscriber autopilot_feedback_sub_;
 
   bool loadParameters();

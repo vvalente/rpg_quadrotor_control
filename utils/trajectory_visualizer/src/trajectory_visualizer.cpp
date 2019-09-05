@@ -4,13 +4,10 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <nav_msgs/Odometry.h>
 
-namespace trajectory_visualizer
-{
+namespace trajectory_visualizer {
 
-TrajectoryVisualizer::TrajectoryVisualizer()
-{
-  if (!loadParameters())
-  {
+TrajectoryVisualizer::TrajectoryVisualizer() {
+  if (!loadParameters()) {
     ROS_ERROR("[%s] Failed to load all parameters",
               ros::this_node::getName().c_str());
     ros::shutdown();
@@ -22,30 +19,59 @@ TrajectoryVisualizer::TrajectoryVisualizer()
       "autopilot_feedback_trajectory_se", 1);
   odometry_ref_pub_ = nh_.advertise<nav_msgs::Odometry>(
       "reference_odometry", 1);
+  bodyrates_pub_ = nh_.advertise<visualization_msgs::Marker>("bodyrates_viz", 1);
 
   autopilot_feedback_sub_ = nh_.subscribe(
       "autopilot/feedback", 1, &TrajectoryVisualizer::autopilotFeedbackCallback,
       this);
 }
 
-TrajectoryVisualizer::~TrajectoryVisualizer()
-{
+TrajectoryVisualizer::~TrajectoryVisualizer() {
 }
 
 void TrajectoryVisualizer::autopilotFeedbackCallback(
-    const quadrotor_msgs::AutopilotFeedback::ConstPtr &msg)
-{
+    const quadrotor_msgs::AutopilotFeedback::ConstPtr& msg) {
   // store message in buffer
   feedback_queue_.push_front(*msg);
-  while (feedback_queue_.size() > n_points_to_visualize_)
-  {
+  while (feedback_queue_.size() > n_points_to_visualize_) {
     feedback_queue_.pop_back();
   }
 
-  if (feedback_queue_.size() < 2)
-  {
+  if (feedback_queue_.size() < 2) {
     return;
   }
+
+  // visualize feedforward bodyrates
+  Eigen::Vector3d bodyrates_bodyframe = Eigen::Vector3d(msg->reference_state.velocity.angular.x,
+                                                        msg->reference_state.velocity.angular.y,
+                                                        msg->reference_state.velocity.angular.z);
+
+  Eigen::Quaterniond br_bf_q = Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitZ(), bodyrates_bodyframe);
+
+  visualization_msgs::Marker bodyrates_marker;
+  bodyrates_marker.header.frame_id = "hummingbird/base_link";
+  bodyrates_marker.header.stamp = ros::Time::now();
+  bodyrates_marker.ns = "";
+  bodyrates_marker.action = visualization_msgs::Marker::MODIFY;
+  bodyrates_marker.lifetime = ros::Duration(0);
+  bodyrates_marker.type = visualization_msgs::Marker::CUBE;
+  bodyrates_marker.pose.position.x = bodyrates_bodyframe.x() / 2.0;
+  bodyrates_marker.pose.position.y = bodyrates_bodyframe.y() / 2.0;
+  bodyrates_marker.pose.position.z = bodyrates_bodyframe.z() / 2.0;
+  bodyrates_marker.pose.orientation.w = 1.0;
+  bodyrates_marker.pose.orientation.x = 0.0;
+  bodyrates_marker.pose.orientation.y = 0.0;
+  bodyrates_marker.pose.orientation.z = 0.0;
+  bodyrates_marker.id = 0;
+  bodyrates_marker.scale.x = std::abs(bodyrates_bodyframe.x()) + 0.1;
+  bodyrates_marker.scale.y = std::abs(bodyrates_bodyframe.y()) + 0.1;
+  bodyrates_marker.scale.z = std::abs(bodyrates_bodyframe.z()) + 0.1;
+  bodyrates_marker.color.r = 1.0;
+  bodyrates_marker.color.g = 0.0;
+  bodyrates_marker.color.b = 0.0;
+  bodyrates_marker.color.a = 1.0;
+
+  bodyrates_pub_.publish(bodyrates_marker);
 
   // visualize full pose of reference...
   // combine orientation with heading to single quaternion
@@ -100,8 +126,7 @@ void TrajectoryVisualizer::autopilotFeedbackCallback(
   marker.color.b = 0.0;
   marker.color.a = 1.0;
 
-  for (auto it = feedback_queue_.begin(); it != feedback_queue_.end(); it++)
-  {
+  for (auto it = feedback_queue_.begin(); it != feedback_queue_.end(); it++) {
     geometry_msgs::Point point;
     point.x = it->reference_state.pose.position.x;
     point.y = it->reference_state.pose.position.y;
@@ -122,8 +147,7 @@ void TrajectoryVisualizer::autopilotFeedbackCallback(
   marker.color.a = 1.0;
 
   marker.points.clear();
-  for (auto it = feedback_queue_.begin(); it != feedback_queue_.end(); it++)
-  {
+  for (auto it = feedback_queue_.begin(); it != feedback_queue_.end(); it++) {
     geometry_msgs::Point point;
     point.x = it->state_estimate.pose.pose.position.x;
     point.y = it->state_estimate.pose.pose.position.y;
@@ -137,11 +161,9 @@ void TrajectoryVisualizer::autopilotFeedbackCallback(
   marker_pub_se_.publish(marker_msg_se);
 }
 
-bool TrajectoryVisualizer::loadParameters()
-{
+bool TrajectoryVisualizer::loadParameters() {
   if (!quadrotor_common::getParam("n_points_to_visualize",
-                                  n_points_to_visualize_, 50.0))
-  {
+                                  n_points_to_visualize_, 50.0)) {
     return false;
   }
 
@@ -150,8 +172,7 @@ bool TrajectoryVisualizer::loadParameters()
 
 } // namespace trajectory_visualizer
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
   ros::init(argc, argv, "trajectory_visualizer");
   trajectory_visualizer::TrajectoryVisualizer trajectory_visualizer;
 
