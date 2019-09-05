@@ -32,7 +32,7 @@ AutoPilot<Tcontroller, Tparams>::AutoPilot(const ros::NodeHandle& nh, const ros:
     last_control_command_input_thrust_high_(false),
     stop_watchdog_thread_(false), time_last_state_estimate_received_(),
     time_started_emergency_landing_(), destructor_invoked_(false),
-    time_last_autopilot_feedback_published_() {
+    time_last_autopilot_feedback_published_(), time_last_control_command_published_() {
   if (!loadParameters()) {
     ROS_ERROR("[%s] Could not load parameters.", pnh_.getNamespace().c_str());
     ros::shutdown();
@@ -789,7 +789,9 @@ quadrotor_common::ControlCommand AutoPilot<Tcontroller, Tparams>::start(
     reference_state_.position = state_estimate.position;
     reference_state_.heading = quadrotor_common::quaternionToEulerAnglesZYX(
         state_estimate.orientation).z();
-    if (state_estimate.position.z() >= optitrack_land_drop_height_) {
+    if (state_estimate.position.z() >= optitrack_land_drop_height_ + 0.5) {
+      // assuming start from handheld configuration, go directly to hover
+      ROS_INFO("Assuming handheld start, since state_estimate.position.z() > %.2f", optitrack_land_drop_height_);
       setAutoPilotState(States::HOVER);
     }
   }
@@ -1122,12 +1124,8 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
       if (point.time_from_start.toSec() > (dt.toSec() - time_wrapover)) {
         // check if two trajectory points are the same...
         if (reference_trajectory_.points.size() > 1) {
-          Eigen::Vector3d last_pos = reference_trajectory_.points.back().position;
-          double pos_incr = (point.position - last_pos).norm();
-          if (pos_incr > 0.001) {
             point.time_from_start += ros::Duration(time_wrapover);
             reference_trajectory_.points.push_back(point);
-          }
         } else {
           // this is the first point of the reference trajectory
           reference_trajectory_.points.push_back(point);
@@ -1153,6 +1151,7 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
 
   // handle case of empty reference_trajectory
   if (reference_trajectory_.points.empty()) {
+    ROS_WARN("Empty reference trajectory!");
     *trajectory_execution_left_duration = ros::Duration(0.0);
     *trajectories_left_in_queue = 0;
     setAutoPilotState(States::HOVER);
@@ -1319,7 +1318,11 @@ void AutoPilot<Tcontroller, Tparams>::publishControlCommand(
 
     control_cmd_msg = control_cmd.toRosMessage();
 
-    control_command_pub_.publish(control_cmd_msg);
+    // in optitrack flight, the laird module can only handle control commands at 50-60Hz. Limit publishing frequency here
+    if((ros::Time::now() - time_last_control_command_published_).toSec() > min_control_period_) {
+      control_command_pub_.publish(control_cmd_msg);
+      time_last_control_command_published_ = ros::Time::now();
+    }
     state_predictor_.pushCommandToQueue(control_cmd);
     // Save applied thrust to initialize propeller ramping down if necessary
     initial_drop_thrust_ = control_cmd.collective_thrust;
@@ -1420,6 +1423,7 @@ if (!quadrotor_common::getParam(#name, name ## _, pnh_)) \
   GET_PARAM(control_command_input_timeout);
   GET_PARAM(enable_command_feedthrough);
   GET_PARAM(predictive_control_lookahead);
+  GET_PARAM(min_control_period);
 
   if (!base_controller_params_.loadParameters(pnh_)) {
     return false;

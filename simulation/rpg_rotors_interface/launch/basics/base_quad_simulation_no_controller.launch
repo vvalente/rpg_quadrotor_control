@@ -49,26 +49,6 @@
   <!-- RPG stuff !-->
   <group ns="$(arg quad_name)" >
 
-<!--    <group if="$(arg use_ground_truth)">-->
-<!--      <node pkg="rpg_rotors_interface" type="rpg_rotors_interface" -->
-<!--          name="rpg_rotors_interface" clear_params="true" output="screen" launch-prefix="gdb -ex run &#45;&#45;args" >-->
-<!--        <rosparam file="$(find rpg_rotors_interface)/parameters/rpg_rotors_interface.yaml" />-->
-<!--        -->
-<!--        <remap from="odometry" to="ground_truth/odometry" />-->
-<!--        <remap from="rpg_rotors_interface/arm" to="bridge/arm" />-->
-<!--      </node>-->
-<!--    </group>-->
-
-    <group unless="$(arg use_ground_truth)">
-      <node pkg="rpg_rotors_interface" type="rpg_rotors_interface" 
-          name="rpg_rotors_interface" output="screen" >
-        <rosparam file="$(find rpg_rotors_interface)/parameters/rpg_rotors_interface.yaml" />
-
-        <remap from="odometry" to="odometry_sensor1/odometry" />
-        <remap from="rpg_rotors_interface/arm" to="bridge/arm" />
-      </node>
-    </group>
-
     <node pkg="joy" type="joy_node" name="joy_node">
       <param name="autorepeat_rate" value="10"/>
     </node>
