@@ -20,7 +20,6 @@ TrajectoryVisualizer::TrajectoryVisualizer() {
   odometry_ref_pub_ = nh_.advertise<nav_msgs::Odometry>(
       "reference_odometry", 1);
   bodyrates_pub_ = nh_.advertise<visualization_msgs::Marker>("bodyrates_viz", 1);
-
   autopilot_feedback_sub_ = nh_.subscribe(
       "autopilot/feedback", 1, &TrajectoryVisualizer::autopilotFeedbackCallback,
       this);
