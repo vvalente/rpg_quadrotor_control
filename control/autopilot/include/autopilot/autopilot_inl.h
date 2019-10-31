@@ -226,11 +226,11 @@ void AutoPilot<Tcontroller, Tparams>::watchdogThread()
 template <typename Tcontroller, typename Tparams>
 void AutoPilot<Tcontroller, Tparams>:: mlpCompensationCallback(const foldable_drone_msgs::ModelErrorPrediction::ConstPtr& msg) {
 
-    if(base_controller_params_.perform_compensation) {
+    /*if(base_controller_params_.perform_compensation) {
         base_controller_params_.mlp_compensation_x_ = msg->e_acc_lin_x;
         base_controller_params_.mlp_compensation_y_ = msg->e_acc_lin_y;
         base_controller_params_.mlp_compensation_z_ = msg->e_acc_lin_z;
-    }
+    }*/
 
 }
 
